@@ -8,6 +8,10 @@ describe ReceivedHeader do
   end
 
   describe ".generate" do
+    around do |example|
+      Timecop.freeze(Time.utc(2026, 6, 14, 17, 15, 30), &example)
+    end
+
     context "when server is nil" do
       it "returns the correct string" do
         result = described_class.generate(nil, "testhelo", "1.1.1.1", :smtp)
