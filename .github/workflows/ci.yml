@@ -1,6 +1,12 @@
----
 name: CI
-on: [push]
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: write
 
 jobs:
   release-please:
