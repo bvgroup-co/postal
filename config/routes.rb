@@ -6,6 +6,16 @@ Rails.application.routes.draw do
   match "/api/v1/send/raw" => "legacy_api/send#raw", via: [:get, :post, :patch, :put]
   match "/api/v1/messages/message" => "legacy_api/messages#message", via: [:get, :post, :patch, :put]
   match "/api/v1/messages/deliveries" => "legacy_api/messages#deliveries", via: [:get, :post, :patch, :put]
+  namespace :api, constraints: -> (request) { request.format.json? || request.headers["Content-Type"] =~ /application\/json/ } do
+    namespace :v1 do
+      post "domains" => "domains#create"
+      get "domains/:domain.:tld" => "domains#show", as: nil
+      post "domains/*id/check" => "domains#check"
+      get "domains/*id" => "domains#show"
+      delete "domains/*id" => "domains#destroy"
+    end
+  end
+
   post "/api/v1/domains" => "legacy_api/domains#create"
   post "/api/v1/domains/:id/check" => "legacy_api/domains#check"
   delete "/api/v1/domains/:id" => "legacy_api/domains#destroy"
