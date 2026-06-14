@@ -217,11 +217,23 @@ jobs:
             exit 1
           fi
 
-          awk -v version="$VERSION" '
-            $0 ~ "^## \\[" version "\\]" { printing = 1 }
-            printing && /^## \\[/ && $0 !~ "^## \\[" version "\\]" { exit }
-            printing { print }
-          ' CHANGELOG.md > release-notes.md
+          node - <<'NODE' > release-notes.md
+          const fs = require('fs');
+          const version = process.env.VERSION;
+          const lines = fs.readFileSync('CHANGELOG.md', 'utf8').split('\n');
+          let printing = false;
+          for (const line of lines) {
+            if (line.startsWith(`## [${version}]`)) {
+              printing = true;
+            } else if (printing && line.startsWith('## [')) {
+              break;
+            }
+
+            if (printing) {
+              console.log(line);
+            }
+          }
+          NODE
 
           if [ ! -s release-notes.md ]; then
             echo "No CHANGELOG section found for $VERSION" >&2
