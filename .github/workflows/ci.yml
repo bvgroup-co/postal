@@ -92,6 +92,7 @@ jobs:
           IMAGE="${POSTAL_IMAGE_REPOSITORY}"
 
           REF="${GITHUB_REF#refs/heads/}"
+          TAG_REF="${REF//\//-}"
           if [ -z "$REF" ]; then exit 1; fi
 
           VER="$(git describe --tags --always)"
@@ -102,7 +103,7 @@ jobs:
           if [[ "$REF" == "main" ]]; then
             echo "${IMAGE}:latest" >> "$GITHUB_OUTPUT"
           else
-            echo "${IMAGE}:branch-${REF}" >> "$GITHUB_OUTPUT"
+            echo "${IMAGE}:branch-${TAG_REF}" >> "$GITHUB_OUTPUT"
           fi
           echo 'EOF' >> "$GITHUB_OUTPUT"
       - uses: docker/build-push-action@v6
