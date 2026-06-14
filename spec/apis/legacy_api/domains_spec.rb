@@ -127,6 +127,14 @@ RSpec.describe "Legacy Domains API", type: :request do
       expect(response.status).to eq 404
     end
 
+    it "does not coerce malformed numeric IDs" do
+      domain = create(:domain, owner: server)
+
+      post "/api/v1/domains/#{domain.id}-not-a-uuid/check", headers: headers
+
+      expect(response.status).to eq 404
+    end
+
     it "returns 404 for another server's domain" do
       other_domain = create(:domain, owner: create(:server))
 

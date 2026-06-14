@@ -47,7 +47,8 @@ module LegacyAPI
     end
 
     def find_domain
-      domain = @current_credential.server.domains.where("uuid = ? OR id = ?", params[:id], params[:id].to_i).first
+      domain = @current_credential.server.domains.find_by(uuid: params[:id])
+      domain ||= @current_credential.server.domains.find_by(id: params[:id].to_i) if params[:id].to_s.match?(/\A\d+\z/)
       return domain if domain
 
       render json: { error: "Domain not found" }, status: :not_found
