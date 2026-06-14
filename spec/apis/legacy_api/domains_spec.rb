@@ -17,7 +17,7 @@ RSpec.describe "Legacy Domains API", type: :request do
 
   describe "POST /api/v1/domains" do
     it "creates an unverified DNS domain for the authenticated server" do
-      post "/api/v1/domains", headers: headers, params: { domain: "Example.COM" }.to_json
+      post "/api/v1/domains", headers: headers, params: { name: "Example.COM" }.to_json
 
       expect(response.status).to eq 201
       domain = server.domains.find_by!(name: "example.com")
@@ -31,7 +31,7 @@ RSpec.describe "Legacy Domains API", type: :request do
     end
 
     it "returns DNS records needed by Plunk" do
-      post "/api/v1/domains", headers: headers, params: { domain: "example.com" }.to_json
+      post "/api/v1/domains", headers: headers, params: { name: "example.com" }.to_json
 
       expect(parsed_body["records"]).to include(
         hash_including("type" => "TXT", "host" => "example.com", "purpose" => "ownership-verification", "required" => true),
@@ -43,33 +43,34 @@ RSpec.describe "Legacy Domains API", type: :request do
       parsed_body["records"].each do |record|
         expect(record.keys).to include("type", "host", "value", "purpose", "required", "status", "error")
       end
-      expect(parsed_body["statuses"]).to include("ownership" => "Pending")
+      expect(parsed_body["statuses"]["verification"]).to include("status" => "Pending", "error" => nil)
     end
 
-    it "rejects duplicate domains for the same server" do
+    it "returns duplicate domains for the same server idempotently" do
       create(:domain, owner: server, name: "example.com")
 
       expect do
-        post "/api/v1/domains", headers: headers, params: { domain: "example.com" }.to_json
+        post "/api/v1/domains", headers: headers, params: { name: "example.com" }.to_json
       end.to_not(change { server.domains.count })
-      expect(response.status).to eq 422
+      expect(response.status).to eq 200
+      expect(parsed_body["uuid"]).to be_present
     end
 
     it "rejects invalid domains" do
-      post "/api/v1/domains", headers: headers, params: { domain: "bad domain" }.to_json
+      post "/api/v1/domains", headers: headers, params: { name: "bad domain" }.to_json
 
       expect(response.status).to eq 422
     end
 
     it "rejects missing authentication" do
-      post "/api/v1/domains", params: { domain: "example.com" }.to_json
+      post "/api/v1/domains", params: { name: "example.com" }.to_json
 
       expect(response.status).to eq 200
       expect(parsed_body["data"]["code"]).to eq "AccessDenied"
     end
 
     it "rejects invalid authentication" do
-      post "/api/v1/domains", headers: { "x-server-api-key" => "invalid" }, params: { domain: "example.com" }.to_json
+      post "/api/v1/domains", headers: { "x-server-api-key" => "invalid" }, params: { name: "example.com" }.to_json
 
       expect(response.status).to eq 200
       expect(parsed_body["data"]["code"]).to eq "InvalidServerAPIKey"
@@ -79,7 +80,7 @@ RSpec.describe "Legacy Domains API", type: :request do
       suspended_server = create(:server, :suspended)
       suspended_credential = create(:credential, server: suspended_server)
 
-      post "/api/v1/domains", headers: { "x-server-api-key" => suspended_credential.key }, params: { domain: "example.com" }.to_json
+      post "/api/v1/domains", headers: { "x-server-api-key" => suspended_credential.key }, params: { name: "example.com" }.to_json
 
       expect(response.status).to eq 200
       expect(parsed_body["data"]["code"]).to eq "ServerSuspended"
@@ -118,7 +119,7 @@ RSpec.describe "Legacy Domains API", type: :request do
 
       expect(response.status).to eq 200
       expect(domain.reload.spf_status).to eq "OK"
-      expect(parsed_body["statuses"]).to include("spf" => "OK")
+      expect(parsed_body["statuses"]["spf"]).to include("status" => "OK", "error" => nil)
     end
 
     it "returns 404 for unknown domains" do
