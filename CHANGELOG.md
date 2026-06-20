@@ -2,6 +2,13 @@
 
 This file contains all the latest changes and updates to Postal.
 
+## [3.4.1](https://github.com/bvgroup-co/postal/compare/3.4.0...3.4.1) (2026-06-20)
+
+
+### Bug Fixes
+
+* verify ActiveRecord database connections when they are checked out ([85bd504](https://github.com/bvgroup-co/postal/commit/85bd5046cc231055470e46f485e65e47d471c259))
+
 ## [3.4.0](https://github.com/postalserver/postal/compare/3.3.7...3.4.0) (2026-06-14)
 
 
