@@ -11,20 +11,31 @@ RSpec.describe "active record connection verification" do
     expect(callback_filters).to include([:after, :verify!])
   end
 
-  it "verifies pooled connections before checkout returns them to application code" do
-    verify_calls = 0
-
-    allow_any_instance_of(ActiveRecord::ConnectionAdapters::Mysql2Adapter).to receive(:verify!).and_wrap_original do |verify, *args|
-      verify_calls += 1
-      verify.call(*args)
-    end
-
+  it "reconnects a pooled connection killed while idle before application SQL runs" do
+    connection = ActiveRecord::Base.connection
+    killed_connection_id = connection.select_value("SELECT CONNECTION_ID()")
     ActiveRecord::Base.connection_pool.release_connection
-    connection = ActiveRecord::Base.connection_pool.checkout
 
-    expect(verify_calls).to eq(1)
-    expect(connection.instance_variable_get(:@verified)).to be(true)
+    kill_database_connection(killed_connection_id)
+
+    next_connection_id = User.connection.select_value("SELECT CONNECTION_ID()")
+
+    expect(next_connection_id).not_to eq(killed_connection_id)
+    expect { User.first }.not_to raise_error
   ensure
-    ActiveRecord::Base.connection_pool.checkin(connection) if connection
+    ActiveRecord::Base.connection_pool.release_connection
+  end
+
+  def kill_database_connection(connection_id)
+    killer = Mysql2::Client.new(
+      host: Postal::Config.main_db.host,
+      username: Postal::Config.main_db.username,
+      password: Postal::Config.main_db.password,
+      port: Postal::Config.main_db.port,
+      database: Postal::Config.main_db.database
+    )
+    killer.query("KILL #{Integer(connection_id)}")
+  ensure
+    killer&.close
   end
 end
